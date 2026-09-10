@@ -1,0 +1,27 @@
+# 虚拟环境
+.venv/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 测试资料（可能含未脱敏数据，默认不入库）
+data/*
+!data/.gitkeep
+
+# 数据库 / 索引（运行时生成产物，不入库）
+db/
+
+# 敏感配置
+.env
+*.key
+
+# IDE
+.idea/
+.vscode/
+
+# 系统文件
+.DS_Store
+Thumbs.db

@@ -1,0 +1,40 @@
+{
+  "storage": {
+    "search_dirs": [
+      "F:/"
+    ],
+    "exclude_dirs": [
+      ".venv",
+      ".git",
+      ".idea",
+      "__pycache__",
+      "node_modules",
+      "db",
+      "reference",
+      "$RECYCLE.BIN",
+      "System Volume Information"
+    ],
+    "extensions": [
+      ".pdf",
+      ".docx",
+      ".txt",
+      ".md",
+      ".html"
+    ],
+    "max_file_size_mb": 50,
+    "db_path": "db"
+  },
+  "indexing": {
+    "chunk_size": 500,
+    "chunk_overlap": 50,
+    "embedding_model": "BAAI/bge-m3"
+  },
+  "retrieval": {
+    "top_k": 5,
+    "reranker_model": "BAAI/bge-reranker-v2-m3"
+  },
+  "llm": {
+    "model": "deepseek-chat",
+    "base_url": "https://api.deepseek.com"
+  }
+}
