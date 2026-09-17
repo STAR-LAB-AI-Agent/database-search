@@ -16,7 +16,7 @@ def get_reranker():
         from sentence_transformers import CrossEncoder
 
         print("正在加载重排序模型（首次会自动下载约 2GB，请稍候）...", file=sys.stderr)
-        _model = CrossEncoder(model_name, local_files_only=True)
+        _model = CrossEncoder(model_name)
         print("重排序模型加载完成", file=sys.stderr)
     return _model
 

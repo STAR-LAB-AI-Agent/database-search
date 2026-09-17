@@ -6,54 +6,61 @@
 - 按**文件名**找文件（find）
 - 按**内容语义**检索相关片段（search）
 - 基于本地资料**提问**（ask，需要 DeepSeek）
-- 管理资料库：导入、列出、删除、统计
+- 用**智能体**自动完成多步任务（agent，需要 DeepSeek）
+- 管理资料库：导入、同步、列出、删除、统计
 - 建立/查询**元数据库**（catalog / cquery / cstats），按名字/格式/文件夹定位文件
 - 按需**读取文件内容**（read）
-- 在你认为用户给出的问题太过于模糊时必要时选择向用户提问
+- 在你认为用户给出的问题太过于模糊时，必要时选择向用户提问
 
 ## 参数
 
 | 命令 | 参数 | 说明 |
 |---|---|---|
 | `ingest` | `<路径>` | 导入一个文件或目录到资料库 |
-| `find` | `<关键词>` `--dir` | 按文件名模糊匹配（子串 + 容错） |
+| `find` | `<关键词>` `--dir` | 按文件名/所在文件夹模糊匹配（子串 + 容错） |
 | `search` | `<问句>` `--top-k` `--dir` | 按内容语义检索，返回 top-k 片段 |
 | `ask` | `<问题>` `--top-k` | 基于资料问答（需 DeepSeek Key） |
 | `list` | 无 | 列出库中所有文件 |
-| `remove` | `<文件名>` `--yes` | 删除文件（必须带 --yes 确认） |
+| `remove` | `<文件名>` `--yes` | 从磁盘和资料库删除文件（必须带 --yes 确认） |
 | `stats` | 无 | 统计文件数、块数、大小 |
-| `catalog` | 无 | 建立/更新元数据库（记录每个文件夹的文件名+格式） |
-| `cquery` | `--name` `--ext` `--folder` | 查询元数据库，按名字/格式/文件夹定位文件 |
+| `sync` | 无 | 扫描搜索目录，同步新增/修改/删除的文件 |
+| `catalog` | `--dir` | 建立/更新元数据库（记录每个文件夹的文件名+格式） |
+| `cquery` | `--name` `--ext` `--folder` | 查询元数据库；`--name` 同时匹配文件名/文件夹/路径 |
 | `cstats` | 无 | 元数据库统计（文件总数 + 各格式数量） |
-| `read` | `<路径>` | 读取指定文件的内容 |
+| `read` | `<路径>` | 读取指定文件的内容（支持 pdf/docx/txt/md/html） |
+| `agent` | `<问题>` | 智能体：用 DeepSeek 自动调用工具完成多步任务 |
 
 ## 调用方式
 
-在项目根目录执行，返回 JSON：
+在项目根目录执行：
 
 ```bash
 python cli.py <命令> [参数...]
 ```
 
+- 默认输出**人类易读文本**；需要机器可解析的原始数据时，在子命令后加 `--json`，例如 `python cli.py search "关键词" --json`。
 - `search` 和 `ask` 执行前会自动同步索引，无需手动 ingest。
-- `remove` 属于高危操作，必须加 `--yes` 才执行。
+- 文件新增/删除后，可用 `sync` 显式刷新索引；`list`/`stats` 显示的是当前索引（刷新后才反映最新变化）。
+- `remove` 会同时删除磁盘上的真实文件，属于高危操作，必须加 `--yes` 才执行。
 - 找文件建议先用 `cquery`/`find` 定位，再用 `read` 读内容。
 
 ## 结果格式
 
-所有命令返回 JSON，`action` 字段标明命令：
+默认输出易读文本；加 `--json` 时返回 JSON，`action` 字段标明命令：
 
 ```json
 {"action": "search", "count": 3, "results": [{"text": "...", "source": "xx.pdf", "page": 3, "score": 0.87}]}
 {"action": "find", "count": 2, "results": [{"path": "F:/.../会议纪要.docx", "name": "会议纪要.docx", "size": 10240, "mtime": 123}]}
-{"action": "ask", "answer": "……", "sources": ["xx.pdf"]}
-{"action": "list", "files": [{"name": "xx.pdf", "chunks": 12, "size": 100, "mtime": 123}]}
+{"action": "ask", "answer": "……", "sources": ["xx.pdf"], "context_chunks": 8, "rounds": 2}
+{"action": "list", "files": [{"name": "xx.pdf", "path": "F:/.../xx.pdf", "chunks": 12, "size": 100, "mtime": 123}]}
 {"action": "stats", "files": 5, "chunks": 320, "size_bytes": 1048576}
-{"action": "remove", "name": "xx.pdf", "removed": true}
+{"action": "remove", "name": "xx.pdf", "removed": true, "count": 1, "paths": ["F:/.../xx.pdf"]}
 {"action": "ingest", "added": 3, "updated": 0, "deleted": 0, "skipped": 0}
+{"action": "sync", "added": 2, "updated": 0, "deleted": 1, "skipped": 0}
 {"action": "cquery", "count": 2, "results": [{"path": "F:/.../报告.pdf", "name": "报告.pdf", "ext": ".pdf", "folder": "F:/..."}]}
 {"action": "cstats", "total": 7, "by_ext": {".docx": 3, ".pdf": 2}}
 {"action": "read", "path": "F:/.../报告.pdf", "text": "文件内容..."}
+{"action": "agent", "answer": "……"}
 ```
 
 出错时返回：`{"error": "错误说明"}`。
@@ -80,3 +87,9 @@ python cli.py <命令> [参数...]
 
 7. 用户：「帮我看看 报告.pdf 里写了什么」
    → `python cli.py read "F:/.../报告.pdf"`
+
+8. 用户：「资料库有更新，帮我刷新一下」
+   → `python cli.py sync`
+
+9. 用户：「综合多份资料回答一个需要多步检索的问题」
+   → `python cli.py agent "……"`

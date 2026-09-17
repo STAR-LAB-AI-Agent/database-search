@@ -23,7 +23,7 @@ def search(query, collection, top_k=5):
             "text": text,
             "source": meta.get("source"),
             "page": meta.get("page"),
-            "score": round(1 - dist / 3, 4),
+            "score": max(0.0, min(1.0, round(1 - dist / 3, 4))),
         })
     return hits
 

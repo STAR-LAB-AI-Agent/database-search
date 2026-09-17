@@ -21,11 +21,15 @@ def find(pattern, dirs, cutoff=0.6):
             dirnames[:] = [n for n in dirnames if n not in exclude_dirs]
             for name in filenames:
                 stem = Path(name).stem   # 去掉后缀，比如 config.json → config
-                # 第一关：子串包含（快、准）
-                hit = pattern_lower in stem.lower()
+                # 第一关：子串包含（快、准）——完整文件名、去后缀主干、所在文件夹路径都查
+                hit = (
+                    pattern_lower in name.lower()
+                    or pattern_lower in stem.lower()
+                    or pattern_lower in str(root).lower()
+                )
                 # 第二关：模糊相似（容忍错别字）
                 if not hit:
-                    hit = bool(get_close_matches(pattern, [stem], n=1, cutoff=cutoff))
+                    hit = bool(get_close_matches(pattern, [name, stem], n=1, cutoff=cutoff))
                 if hit:
                     path = Path(root) / name
                     stat = path.stat()
@@ -35,4 +39,6 @@ def find(pattern, dirs, cutoff=0.6):
                         "size": stat.st_size,
                         "mtime": stat.st_mtime,
                     })
+
+    results.sort(key=lambda r: r["name"].lower())
     return results

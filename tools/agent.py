@@ -12,11 +12,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "cquery",
-            "description": "按文件名/格式/文件夹在元数据库中定位文件，返回文件清单（含路径、名字、格式）",
+            "description": "在元数据库中定位文件，返回文件清单（含路径、名字、格式）。name 关键词会同时匹配文件名、主干、所在文件夹和完整路径，所以按主题/课程名（如“区块链”）也能命中",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "name": {"type": "string", "description": "文件名关键词（模糊匹配）"},
+                    "name": {"type": "string", "description": "关键词（模糊匹配文件名/文件夹/路径）"},
                     "ext": {"type": "string", "description": "格式后缀，如 .pdf"},
                     "folder": {"type": "string", "description": "文件夹名（模糊匹配）"},
                 },
@@ -125,6 +125,8 @@ def run_agent(question, max_steps=10):
                 "先理解用户需求，再选工具：找文件用 cquery，读内容用 read，"
                 "按内容语义检索用 search，基于资料问答用 ask。"
                 "最后用自然语言向用户报告结果。"
+                "注意：只能报告工具真实返回的结果，禁止编造文件名、路径或内容；"
+                "如果按文件名没找到，试着用 name 关键词（会匹配文件夹/路径）或 folder 参数再查一次。"
             ),
         },
         {"role": "user", "content": question},

@@ -72,18 +72,23 @@ def load_config() -> dict:
 #获取搜索路径
 def get_search_dirs(extra=None) -> list:
     cfg = load_config()
-    dirs=list(cfg["storage"]["search_dirs"])
+    dirs = list(cfg["storage"]["search_dirs"])
     if extra:
         if isinstance(extra, (str, Path)):
             dirs.append(extra)
         else:
             dirs.extend(extra)
-    result=[]
+
+    result = []
+    seen = set()  # 去重：避免同一个目录被重复扫描
     for d in dirs:
-        p=Path(d)
+        p = Path(d)
         if not p.is_absolute():
-            p=BASE_DIR / p
-        result.append(p.resolve())
+            p = BASE_DIR / p
+        p = p.resolve()
+        if p not in seen:
+            seen.add(p)
+            result.append(p)
 
     return result
 #获取dp绝对路径

@@ -1,9 +1,7 @@
 chromadb
 pdfplumber
 python-docx
-fastembed
 openai
 python-dotenv
-watchdog
 pytest
 sentence-transformers

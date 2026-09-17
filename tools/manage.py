@@ -17,11 +17,12 @@ def list_files(db_path):
             "size": info.get("size", 0),
             "mtime": info.get("mtime"),
         })
+    files.sort(key=lambda f: f["name"].lower())
     return files
 
 
 def remove_file(db_path, collection, name, confirm=False):
-    """按文件名删除一个文件（从向量库和账本里都删掉）。"""
+    """按文件名删除文件：同时从磁盘和资料库（向量库 + 账本）删除。"""
     if not confirm:
         return {"removed": False, "reason": "删除是高危操作，请加 --yes 确认"}
 
@@ -30,14 +31,25 @@ def remove_file(db_path, collection, name, confirm=False):
     if not matched:
         return {"removed": False, "reason": f"没有找到文件: {name}"}
 
+    removed_paths = []
+    failed = []
     for p, info in matched.items():
         ids = info.get("chunk_ids", [])
         if ids:
             collection.delete(ids=ids)
         del state[p]
+        # 同时删除磁盘上的真实文件，否则下次自动同步又会被索引回来
+        try:
+            Path(p).unlink(missing_ok=True)
+            removed_paths.append(p)
+        except OSError as e:
+            failed.append(f"{p}（{e}）")
 
     _save_state(db_path, state)
-    return {"removed": True, "count": len(matched)}
+    result = {"removed": True, "count": len(matched), "paths": removed_paths}
+    if failed:
+        result["failed"] = failed
+    return result
 
 
 def stats(db_path):

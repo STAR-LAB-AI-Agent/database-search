@@ -16,7 +16,7 @@ def get_model():
         from sentence_transformers import SentenceTransformer
 
         print("正在加载向量模型（首次会自动下载约 2GB，请稍候）...", file=sys.stderr)
-        _model = SentenceTransformer(model_name, local_files_only=True)
+        _model = SentenceTransformer(model_name)
         print("向量模型加载完成", file=sys.stderr)
     return _model
 

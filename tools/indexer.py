@@ -9,27 +9,35 @@ from tools.loader import load_file
 from tools.splitter import split_pages
 
 def _scan_files(dirs):
+    """扫描 dirs（可为目录或单个文件），返回 {绝对路径: {mtime, size}}。"""
     cfg = load_config()
     exclude_dirs = set(cfg["storage"]["exclude_dirs"])
     max_bytes = cfg["storage"]["max_file_size_mb"] * 1024 * 1024
 
     files = {}
+
+    def _add(path):
+        stat = path.stat()
+        if stat.st_size > max_bytes:
+            return
+        files[str(path.resolve())] = {
+            "mtime": stat.st_mtime,
+            "size": stat.st_size,
+        }
+
     for d in dirs:
         d = Path(d)
+        if d.is_file():
+            if d.exists():
+                _add(d)
+            continue
         if not d.exists():
             continue
         for root, dirnames, filenames in os.walk(d):
             # 关键：原地删掉要排除的文件夹，os.walk 就不会再进去
             dirnames[:] = [n for n in dirnames if n not in exclude_dirs]
             for name in filenames:
-                path = Path(root) / name
-                stat = path.stat()
-                if stat.st_size > max_bytes:
-                    continue
-                files[str(path.resolve())] = {
-                    "mtime": stat.st_mtime,
-                    "size": stat.st_size,
-                }
+                _add(Path(root) / name)
     return files
 
 
@@ -65,7 +73,7 @@ def _get_collection(db_path):
           metadata={"embedding_model": model_name},
       )
 
-    recorded = collection.metadata.get("embedding_model")
+    recorded = (collection.metadata or {}).get("embedding_model")
     if recorded and recorded != model_name:
         raise ValueError(
               f"资料库是用模型 '{recorded}' 建的，当前配置是 '{model_name}'。"
@@ -150,7 +158,8 @@ def sync_index(dirs, db_path):
                 ids = _index_file(path, collection)
                 state[path] = {"mtime": fp["mtime"], "size": fp["size"], "chunk_ids": ids}
                 added += 1
-            except Exception:
+            except Exception as e:
+                print(f"索引失败，跳过: {Path(path).name}（{e}）", file=sys.stderr)
                 skipped += 1
         elif old["mtime"] != fp["mtime"] or old["size"] != fp["size"]:
             # 修改了：先删旧块，再重建
@@ -161,7 +170,8 @@ def sync_index(dirs, db_path):
                 ids = _index_file(path, collection)
                 state[path] = {"mtime": fp["mtime"], "size": fp["size"], "chunk_ids": ids}
                 updated += 1
-            except Exception:
+            except Exception as e:
+                print(f"索引失败，跳过: {Path(path).name}（{e}）", file=sys.stderr)
                 skipped += 1
           # 否则：没变化，跳过
 
@@ -184,5 +194,4 @@ def ingest(path):
     from tools.config import get_db_path
 
     p = Path(path)
-    dirs = [p] if p.is_dir() else [p.parent]
-    return sync_index(dirs, get_db_path())
+    return sync_index([p], get_db_path())
