@@ -1,5 +1,5 @@
+import fnmatch
 import json
-import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,7 +12,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG = {
     "storage": {
         "search_dirs": ["F:/"],
-        "exclude_dirs": [".venv", ".git", ".idea", "__pycache__", "node_modules", "db", "reference", "$RECYCLE.BIN", "System Volume Information"],
+        "exclude_dirs": [".venv", ".git", ".idea", "__pycache__", ".pytest_cache", "node_modules", "db", "reference", "$RECYCLE.BIN", "System Volume Information"],
+        "exclude_files": [".env", "*.key", "*.pem", "*.p12", ".git-credentials", ".env.example", ".gitignore", "Thumbs.db", ".DS_Store"],
         "extensions": [".pdf", ".docx", ".txt", ".md"],
         "max_file_size_mb": 50,
         "db_path": "db",
@@ -23,10 +24,6 @@ DEFAULT_CONFIG = {
         "embedding_model": "BAAI/bge-m3",
     },
     "retrieval": {"top_k": 5, "reranker_model": "BAAI/bge-reranker-v2-m3"},
-    "llm": {
-        "model": "deepseek-chat",
-        "base_url": "https://api.deepseek.com",
-    },
 }
 
 # 缓存：第一次读完就存这里，之后直接用，不再重复读文件。
@@ -114,10 +111,11 @@ def get_reranker_model() -> str:
     return load_config()["retrieval"].get("reranker_model", "BAAI/bge-reranker-v2-m3")
 
 
-def get_llm_config() -> dict:
-    cfg = load_config()
-    return {
-        "model": cfg["llm"]["model"],
-        "base_url": cfg["llm"]["base_url"],
-        "api_key": os.getenv("DEEPSEEK_API_KEY", ""),
-    }
+def is_excluded_filename(name: str) -> bool:
+    """判断文件名是否命中 storage.exclude_files（支持 glob，如 *.key）。
+
+    大小写不敏感；索引扫描与文件名检索时用它跳过敏感/噪声文件。
+    """
+    patterns = load_config()["storage"].get("exclude_files", [])
+    lowered = name.lower()
+    return any(fnmatch.fnmatch(lowered, p.lower()) for p in patterns)

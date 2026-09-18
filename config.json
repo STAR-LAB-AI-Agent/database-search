@@ -1,18 +1,30 @@
 {
   "storage": {
     "search_dirs": [
-      "F:/"
+      "data"
     ],
     "exclude_dirs": [
       ".venv",
       ".git",
       ".idea",
       "__pycache__",
+      ".pytest_cache",
       "node_modules",
       "db",
       "reference",
       "$RECYCLE.BIN",
       "System Volume Information"
+    ],
+    "exclude_files": [
+      ".env",
+      "*.key",
+      "*.pem",
+      "*.p12",
+      ".git-credentials",
+      ".env.example",
+      ".gitignore",
+      "Thumbs.db",
+      ".DS_Store"
     ],
     "extensions": [
       ".pdf",
@@ -32,9 +44,5 @@
   "retrieval": {
     "top_k": 5,
     "reranker_model": "BAAI/bge-reranker-v2-m3"
-  },
-  "llm": {
-    "model": "deepseek-chat",
-    "base_url": "https://api.deepseek.com"
   }
 }

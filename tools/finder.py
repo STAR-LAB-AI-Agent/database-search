@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from difflib import get_close_matches
 
-from tools.config import load_config
+from tools.config import load_config, is_excluded_filename
 
 
 def find(pattern, dirs, cutoff=0.6):
@@ -20,6 +20,8 @@ def find(pattern, dirs, cutoff=0.6):
         for root, dirnames, filenames in os.walk(d):
             dirnames[:] = [n for n in dirnames if n not in exclude_dirs]
             for name in filenames:
+                if is_excluded_filename(name):
+                    continue
                 stem = Path(name).stem   # 去掉后缀，比如 config.json → config
                 # 第一关：子串包含（快、准）——完整文件名、去后缀主干、所在文件夹路径都查
                 hit = (

@@ -12,7 +12,6 @@ from tools.config import get_db_path, get_search_dirs, get_top_k
 from tools.indexer import _get_collection, sync_index, ingest
 from tools.finder import find
 from tools.retriever import search
-from tools.qa import ask
 from tools.manage import list_files, remove_file, stats
 
 
@@ -71,16 +70,6 @@ def _render(obj):
             lines.append("    " + r["text"].strip().replace("\n", " "))
         return "\n".join(lines)
 
-    if action == "ask":
-        lines = [obj["answer"].strip(), ""]
-        if obj.get("sources"):
-            lines.append("📚 参考来源：")
-            for s in obj["sources"]:
-                lines.append(f"  · {s}")
-        if obj.get("context_chunks"):
-            lines.append(f"（本次检索使用了 {obj['context_chunks']} 个片段，共 {obj.get('rounds', 1)} 轮）")
-        return "\n".join(lines).rstrip()
-
     if action == "list":
         if not obj["files"]:
             return "资料库为空（还没有导入任何文件）。"
@@ -129,9 +118,6 @@ def _render(obj):
             return f"📄 {obj['path']}\n\n{text}"
         return f"📄 {obj['path']}（文件为空或无法解析）"
 
-    if action == "agent":
-        return obj.get("answer", "")
-
     # 未知 action：回退成 JSON，至少不丢信息
     return json.dumps(obj, ensure_ascii=False, indent=2)
 
@@ -160,15 +146,6 @@ def cmd_search(args):
     top_k = args.top_k if args.top_k is not None else get_top_k()
     results = search(args.query, collection, top_k=top_k)
     return {"action": "search", "count": len(results), "results": results}
-
-
-def cmd_ask(args):
-    db = get_db_path()
-    sync_index(get_search_dirs(), db)
-    collection = _get_collection(db)
-    top_k = args.top_k if args.top_k is not None else get_top_k()
-    result = ask(args.question, collection, top_k=top_k)
-    return {"action": "ask", **result}
 
 
 def cmd_list(args):
@@ -229,14 +206,6 @@ def cmd_read(args):
     return {"action": "read", "path": args.path, "text": text}
 
 
-def cmd_agent(args):
-    """智能体：用 DeepSeek 自动调用工具完成任务。"""
-    from tools.agent import run_agent
-
-    answer = run_agent(args.question)
-    return {"action": "agent", "answer": answer}
-
-
 def main():
     # Windows 控制台中文乱码修复
     if hasattr(sys.stdout, "reconfigure"):
@@ -263,11 +232,6 @@ def main():
     p.add_argument("--top-k", type=int, default=None)
     p.add_argument("--dir", default=None)
     p.set_defaults(func=cmd_search)
-
-    p = sub.add_parser("ask", help="基于资料问答", parents=[common])
-    p.add_argument("question")
-    p.add_argument("--top-k", type=int, default=None)
-    p.set_defaults(func=cmd_ask)
 
     p = sub.add_parser("list", help="列出库中文件", parents=[common])
     p.set_defaults(func=cmd_list)
@@ -299,10 +263,6 @@ def main():
     p = sub.add_parser("read", help="读取指定文件的内容", parents=[common])
     p.add_argument("path")
     p.set_defaults(func=cmd_read)
-
-    p = sub.add_parser("agent", help="智能体：自动调用工具完成任务", parents=[common])
-    p.add_argument("question")
-    p.set_defaults(func=cmd_agent)
 
     args = parser.parse_args()
 

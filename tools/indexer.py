@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from tools.config import load_config
+from tools.config import load_config, is_excluded_filename
 from tools.embeddings import embed
 from tools.loader import load_file
 from tools.splitter import split_pages
@@ -37,6 +37,8 @@ def _scan_files(dirs):
             # 关键：原地删掉要排除的文件夹，os.walk 就不会再进去
             dirnames[:] = [n for n in dirnames if n not in exclude_dirs]
             for name in filenames:
+                if is_excluded_filename(name):
+                    continue
                 _add(Path(root) / name)
     return files
 
